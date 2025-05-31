@@ -56,7 +56,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     BS = 32
     losses, accuracies = [], []
-    for i in (t := trange(100)):
+    for i in (t := trange(1000)):
         samp = np.random.randint(0, X_train.shape[0], BS)
         X = torch.tensor(X_train[samp], dtype=torch.float32).reshape(-1, 28*28)
         Y = torch.tensor(Y_train[samp], dtype=torch.long)
@@ -78,9 +78,9 @@ plt.figure()
 plt.plot(losses, label='Loss')
 plt.xlabel('Iteration')
 plt.plot(accuracies, label='Accuracy')
-plt.ylim(-1, 2)
+plt.ylim(-0.1, 1.1)
 plt.legend()
-plt.savefig("loss.png")
+plt.show()
 plt.close()
 
 
