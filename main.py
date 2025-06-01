@@ -1,5 +1,4 @@
 from nn import BobNet
-from optim import SGD, Adam
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -19,9 +18,9 @@ if __name__ == "__main__":
     # training
     model = BobNet()
     loss_func = nn.CrossEntropyLoss()
-    # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     # optimizer = SGD(model.parameters(), lr=0.001)
-    optimizer = Adam(model.parameters(), lr=0.001)
+    # optimizer = Adam(model.parameters(), lr=0.001)
     BS = 32
     losses, accuracies = [], []
     for i in (t := trange(1000)):
@@ -48,7 +47,7 @@ if __name__ == "__main__":
     plt.plot(accuracies, label='Accuracy')
     # plt.ylim(-0.1, 1.1)
     plt.legend()
-    plt.show()
+    # plt.show()
     plt.close()
 
 
@@ -62,17 +61,36 @@ if __name__ == "__main__":
     # **** NO MORE PYTORCH HEAR ****
 
     # init the nextwork
-    # l1 = np.zeros((128, 28*28), dtype=np.float32)
-    # l2 = np.zeros((10, 128), dtype=np.float32)
-    # l1[:] = model.l1.weight.detach().numpy()
-    # l2[:] = model.l2.weight.detach().numpy()
+    l1 = np.zeros((128, 28*28), dtype=np.float32)
+    l2 = np.zeros((10, 128), dtype=np.float32)
+    l1[:] = model.l1.weight.detach().numpy()
+    l2[:] = model.l2.weight.detach().numpy()
 
-    # def forward(x):
-    #     x = x @ l1.T
-    #     # relu
-    #     x = np.maximum(x, 0)
-    #     x = x @ l2.T
-    #     return x
+    def forward(x):
+        x = x @ l1.T
+        # relu
+        x = np.maximum(x, 0)
+        x = x @ l2.T
+        return x
+    
+    # use cross entropy loss
+    Y_test_pred_out = forward(X_test.reshape(-1, 28*28)) # [N, 10]
+    # softmax
+    p = np.exp(Y_test_pred_out) / np.sum(np.exp(Y_test_pred_out), axis=1, keepdims=True)
+    
+    log_p = np.log(p)
+    ret = -log_p[np.arange(Y_test.shape[0]), Y_test]
+    loss = np.mean(ret)
+    print('loss of numpy model: ', loss)
+    G = 16
+    grid = sorted(list(zip(ret, np.arange(ret.shape[0]))), reverse=True)[:G*G]
+    X_bad = X_test[[id for (_, id) in grid]]
+
+    
+    img = np.concatenate(X_bad.reshape((G, 28*G, 28)), axis=1)
+    plt.imsave("grid.png", img)
+    plt.close()
+
     # Y_test_pred = np.argmax(forward(X_test.reshape(-1, 28*28)), axis=1)
-    # accuracy = (Y_test_pred == Y_test).mean()
+    # accuracy = (Y_test_pred == Y_test).mean() * 100
     # print('accuracy of numpy model: ', accuracy)

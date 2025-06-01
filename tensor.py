@@ -2,7 +2,9 @@ import numpy as np
 from functools import partialmethod
 
 class Context:
-  def __init__(self):
+  def __init__(self, arg, *tensors):
+    self.arg = arg
+    self.parents = tensors
     self.saved_tensors = []
 
   def save_for_backward(self, *x):
@@ -11,7 +13,7 @@ class Context:
 class Tensor:
   def __init__(self, data, _children=()):
     self.data = data
-    self.grad = np.zeros_like(data)
+    self.grad = None
      # internal variables used for autograd graph construction
     self._prev = set(_children)
 
