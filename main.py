@@ -1,5 +1,6 @@
+from nn import BobNet
+from optim import SGD, Adam
 import numpy as np
-import struct
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
@@ -7,28 +8,20 @@ from tqdm import trange
 from util import fetch_mnist
 
 
-class BobNet(nn.Module):
-    def __init__(self):
-        super(BobNet, self).__init__()
-        self.l1 = nn.Linear(28*28, 128, bias=False)
-        self.act = nn.ReLU()
-        self.l2 = nn.Linear(128, 10, bias=False)
-    def forward(self, x):
-        x = self.l1(x)
-        x = self.act(x)
-        x = self.l2(x)
-        return x
 
 
 if __name__ == "__main__":
     # load data
     X_train, Y_train, X_test, Y_test = fetch_mnist()
     # plt.imsave("a.png", X_train[0], cmap='gray')
-
+    X_train = X_train.astype(np.float32) / 255.0
+    X_test = X_test.astype(np.float32) / 255.0
     # training
     model = BobNet()
     loss_func = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    # optimizer = SGD(model.parameters(), lr=0.001)
+    optimizer = Adam(model.parameters(), lr=0.001)
     BS = 32
     losses, accuracies = [], []
     for i in (t := trange(1000)):
@@ -53,9 +46,9 @@ if __name__ == "__main__":
     plt.plot(losses, label='Loss')
     plt.xlabel('Iteration')
     plt.plot(accuracies, label='Accuracy')
-    plt.ylim(-0.1, 1.1)
+    # plt.ylim(-0.1, 1.1)
     plt.legend()
-    # plt.show()
+    plt.show()
     plt.close()
 
 
@@ -69,20 +62,17 @@ if __name__ == "__main__":
     # **** NO MORE PYTORCH HEAR ****
 
     # init the nextwork
-    l1 = np.zeros((128, 28*28), dtype=np.float32)
-    l2 = np.zeros((10, 128), dtype=np.float32)
-    l1[:] = model.l1.weight.detach().numpy()
-    l2[:] = model.l2.weight.detach().numpy()
+    # l1 = np.zeros((128, 28*28), dtype=np.float32)
+    # l2 = np.zeros((10, 128), dtype=np.float32)
+    # l1[:] = model.l1.weight.detach().numpy()
+    # l2[:] = model.l2.weight.detach().numpy()
 
-    def forward(x):
-        x = x @ l1.T
-        # relu
-        x = np.maximum(x, 0)
-        x = x @ l2.T
-        return x
-    Y_test_pred = np.argmax(forward(X_test.reshape(-1, 28*28)), axis=1)
-    accuracy = (Y_test_pred == Y_test).mean()
-    print('accuracy of numpy model: ', accuracy)
-# training
-
-# evaluation
+    # def forward(x):
+    #     x = x @ l1.T
+    #     # relu
+    #     x = np.maximum(x, 0)
+    #     x = x @ l2.T
+    #     return x
+    # Y_test_pred = np.argmax(forward(X_test.reshape(-1, 28*28)), axis=1)
+    # accuracy = (Y_test_pred == Y_test).mean()
+    # print('accuracy of numpy model: ', accuracy)
