@@ -39,17 +39,22 @@ class Tensor:
       if g.shape != t.data.shape:
         print("grad shape must match tensor shape in %r, %r != %r" % (self._ctx.arg, g.shape, t.data.shape))
         assert False
-      t.grad += g
+      t.grad = g
       t.backward(False)
 
 class Function:
   def apply(self, arg, *x):
-    ctx = Context(self, arg, *x)
-    ret = Tensor(arg.forward(ctx, arg,*[t.data for t in x]))
+    ctx = Context(arg, self, *x)
+    # self.data `op` *x
+    ret = Tensor(arg.forward(ctx, self.data,*[t.data for t in x]))
     ret._ctx = ctx
     return ret
 
 def register(name, fxn):
+  # def apply(self, fxn, *x):
+    # self  → Tensor
+    # fxn   → Function （Dot / ReLU / …）
+    # *x    → input Tensors
   setattr(Tensor, name, partialmethod(fxn.apply, fxn))
 
 class ReLU(Function):
@@ -60,8 +65,8 @@ class ReLU(Function):
   
   @staticmethod
   def backward(ctx, grad_output):
-    input = ctx.saved_tensors
-    grad_input = grad_output.clone()
+    input, = ctx.saved_tensors
+    grad_input = grad_output.copy()
     grad_input[input < 0] = 0
     return grad_input
 register("relu", ReLU)
@@ -74,23 +79,65 @@ class Dot(Function):
   
   @staticmethod
   def backward(ctx, grad_output):
+    # input: (N, in), weight: (in, out)
+    # grad_output: (N, out), grad_input: (N, in), grad_weight: (in, out)
     # X @ W.T = out
     # get children
     input, weight = ctx.saved_tensors
     # use dims to judge
-    grad_input = grad_output.dot(weight)
-    grad_weight = grad_output.T.dot(input)
+    grad_input = grad_output.dot(weight.T)
+    grad_weight = grad_output.T.dot(input).T
     return grad_input, grad_weight
 register("dot", Dot)
+
+class Mul(Function):
+  @staticmethod
+  def forward(ctx, x, y):
+    ctx.save_for_backward(x, y)
+    return x * y
+  
+  @staticmethod
+  def backward(ctx, grad_output):
+    x, y = ctx.saved_tensors
+    return y * grad_output, x * grad_output
+register("mul", Mul)
 
 class Sum(Function):
   @staticmethod
   def forward(ctx, input):
     ctx.save_for_backward(input)
-    return input.sum()
+    return np.array(input.sum())
   
   @staticmethod
   def backward(ctx, grad_ouput):
-    input = ctx.saved_tensors
+    input, = ctx.saved_tensors
     return grad_ouput * np.ones_like(input)
 register("sum", Sum)
+
+class Add(Function):
+  @staticmethod
+  def forward(ctx, x, y):
+    ctx.save_for_backward(x, y)
+    return x + y
+  
+  @staticmethod
+  def backward(ctx, grad_output):
+    return grad_output, grad_output
+register("add", Add)
+
+class LogSoftmax(Function):
+  @staticmethod
+  def forward(ctx, input):
+    def logsumexp(x):
+      c = np.max(x,axis=1,keepdims=True)
+      return c + np.log(np.exp(x - c).sum(axis=1,keepdims=True))
+    output = input - logsumexp(input)
+    ctx.save_for_backward(output)
+    return output
+  
+  @staticmethod
+  def backward(ctx, grad_output):
+    output, = ctx.saved_tensors
+    row_sum = grad_output.sum(axis=1,keepdims=True)
+    return grad_output - np.exp(output) * row_sum
+register("logsoftmax", LogSoftmax)
