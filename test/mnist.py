@@ -117,10 +117,10 @@ X_test = X_test.astype(np.float32) / 255.0
 # training
 l1 = Tensor(layer_init(28*28, 128))
 l2 = Tensor(layer_init(128, 10))
-lr = 0.05
+lr = 0.01
 BS = 128
-# optimizer = Adam([l1, l2], lr)
-optimizer = SGD([l1, l2], lr)
+optimizer = Adam([l1, l2], lr)
+# optimizer = SGD([l1, l2], lr)
 
 losses, accuracies = [], []
 for i in (t := trange(1000)):

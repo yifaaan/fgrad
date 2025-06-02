@@ -35,11 +35,15 @@ class Adam(Optimizer):
     def step(self):
         # 在梯度历史上计算
         self.t += 1
-        for i, t in enumerate(self.params):
-            self.m[i] = self.b1 * self.m[i] + (1 - self.b1) * t.grad
-            self.v[i] = self.b2 * self.v[i] + (1 - self.b2) * np.square(t.grad)
-            m_hat = self.m[i] / (1 - self.b1**self.t)
-            v_hat = self.v[i] / (1 - self.b2**self.t)
-            t.data -= self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
+        bc1 = 1.0 - self.b1**self.t
+        bc2 = 1.0 - self.b2**self.t
+        for i, param in enumerate(self.params):
+            if param.grad is None:
+                continue
+            self.m[i] = self.b1 * self.m[i] + (1 - self.b1) * param.grad
+            self.v[i] = self.b2 * self.v[i] + (1 - self.b2) * np.square(param.grad)
+            m_hat = self.m[i] / bc1
+            v_hat = self.v[i] / bc2
+            param.data -= self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
 
         
