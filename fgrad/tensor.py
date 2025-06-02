@@ -41,6 +41,10 @@ class Tensor:
         assert False
       t.grad = g
       t.backward(False)
+  
+  def mean(self):
+      div = Tensor(np.array([1/self.data.size]))
+      return self.sum().mul(div)
 
 class Function:
   def apply(self, arg, *x):
@@ -70,6 +74,7 @@ class ReLU(Function):
     grad_input[input < 0] = 0
     return grad_input
 register("relu", ReLU)
+
 
 class Dot(Function):
   @staticmethod
@@ -106,7 +111,7 @@ class Sum(Function):
   @staticmethod
   def forward(ctx, input):
     ctx.save_for_backward(input)
-    return np.array(input.sum())
+    return np.array([input.sum()])
   
   @staticmethod
   def backward(ctx, grad_ouput):

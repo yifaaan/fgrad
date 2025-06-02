@@ -5,11 +5,10 @@ import torch
 import torch.nn as nn
 from tqdm import trange
 from util import fetch_mnist
+from fgrad import Tensor, optim
 
 
-
-
-if __name__ == "__main__":
+def use_torch():
     # load data
     X_train, Y_train, X_test, Y_test = fetch_mnist()
     # plt.imsave("a.png", X_train[0], cmap='gray')
@@ -97,3 +96,67 @@ if __name__ == "__main__":
     # Y_test_pred = np.argmax(forward(X_test.reshape(-1, 28*28)), axis=1)
     # accuracy = (Y_test_pred == Y_test).mean() * 100
     # print('accuracy of numpy model: ', accuracy)
+
+def layer_init(m, h):
+    ret = np.random.uniform(-1., 1., size=(m,h)).astype(np.float32) / np.sqrt(m*h)
+    return ret
+
+if __name__ == "__main__":
+    X_train, Y_train, X_test, Y_test = fetch_mnist()
+    X_train = X_train.astype(np.float32) / 255.0
+    X_test = X_test.astype(np.float32) / 255.0
+    # training
+    l1 = Tensor(layer_init(28*28, 128))
+    l2 = Tensor(layer_init(128, 10))
+    lr = 0.01  # 增加学习率
+    BS = 128
+    losses, accuracies = [], []
+    for i in (t := trange(1000)):
+        samp = np.random.randint(0, X_train.shape[0], BS)
+        X = Tensor(X_train[samp].reshape(-1, 28*28))
+        Y = Y_train[samp]
+        # create one-hot matrix
+        y = np.zeros((BS, 10), dtype=np.float32)
+        # set true label to -1:one-hot
+        y[np.arange(BS), Y] = -1
+        y = Tensor(y)
+
+        x = X.dot(l1)
+        x = x.relu()
+        x = x_l2 = x.dot(l2)
+        x = x.logsoftmax()
+        x = x.mul(y)
+        x = x.mean()
+        x.backward()
+        loss = x.data
+        
+        cat = np.argmax(x_l2.data, axis=1)
+        accuracy = (cat == Y).mean()
+
+        optimizer = optim.Adam([l1, l2], lr)
+        optimizer.step()
+        optimizer.zero_grad()
+
+        # l1.data -= lr * l1.grad
+        # l2.data -= lr * l2.grad
+    
+        
+        losses.append(loss)
+        accuracies.append(accuracy)
+        t.set_description("loss %.2f, accuracy %.2f" % (loss, accuracy))
+
+       
+
+def forward(x):
+    x = x.dot(l1.data)
+    x = np.maximum(x, 0)
+    x = x.dot(l2.data)
+    return x
+
+def numpy_eval():
+    Y_test_pred_out = forward(X_test.reshape(-1, 28*28)) # [N, 10]
+    Y_test_pred = np.argmax(Y_test_pred_out, axis=1)
+    accuracy = (Y_test_pred == Y_test).mean()
+    return accuracy
+
+print("test set accuracy is %f" % numpy_eval())
