@@ -18,6 +18,7 @@ if __name__ == "__main__":
     # training
     model = BobNet()
     loss_func = nn.CrossEntropyLoss()
+    # loss_func = nn.NLLLoss() # 接收「对数概率」和标签
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     # optimizer = SGD(model.parameters(), lr=0.001)
     # optimizer = Adam(model.parameters(), lr=0.001)
@@ -59,6 +60,9 @@ if __name__ == "__main__":
 
 
     # **** NO MORE PYTORCH HEAR ****
+    plt.imsave("grad1.png", model.l1.weight.grad)
+    plt.imsave("grad2.png", model.l2.weight.grad)
+    plt.close()
 
     # init the nextwork
     l1 = np.zeros((128, 28*28), dtype=np.float32)
@@ -86,7 +90,6 @@ if __name__ == "__main__":
     grid = sorted(list(zip(ret, np.arange(ret.shape[0]))), reverse=True)[:G*G]
     X_bad = X_test[[id for (_, id) in grid]]
 
-    
     img = np.concatenate(X_bad.reshape((G, 28*G, 28)), axis=1)
     plt.imsave("grid.png", img)
     plt.close()

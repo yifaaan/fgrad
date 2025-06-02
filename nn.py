@@ -14,4 +14,5 @@ class BobNet(nn.Module):
     def forward(self, x):
         x = F.relu(self.l1(x))
         x = self.l2(x)
+        x = nn.LogSoftmax(dim=1)(x)
         return x
