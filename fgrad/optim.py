@@ -1,5 +1,5 @@
 import numpy as np
-import math
+
 class Optimizer:
     def __init__(self, params):
         self.params = params
