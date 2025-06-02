@@ -3,16 +3,6 @@ from functools import partialmethod
 
 # **** start with three base classes ****
 
-class Context:
-  def __init__(self, arg, *tensors):
-    # arg: operator
-    self.arg = arg
-    self.parents = tensors
-    self.saved_tensors = []
-
-  def save_for_backward(self, *x):
-    self.saved_tensors.extend(x)
-
 class Tensor:
   def __init__(self, data):
     if type(data) != np.ndarray:
@@ -35,7 +25,7 @@ class Tensor:
     
     assert(self.grad is not None)
     
-    grads = self._ctx.arg.backward(self._ctx, self.grad)
+    grads = self._ctx.backward(self._ctx, self.grad)
     if len(self._ctx.parents) == 1:
       grads = [grads]
     for t,g in zip(self._ctx.parents, grads):
@@ -52,8 +42,15 @@ class Tensor:
 
 # encode the operation history and compute gradients.
 class Function:
+  def __init__(self, *tensors):
+    self.parents = tensors
+    self.saved_tensors = []
+
+  def save_for_backward(self, *x):
+    self.saved_tensors.extend(x)
+  
   def apply(self, arg, *x):
-    ctx = Context(arg, self, *x)
+    ctx = arg(self, *x)
     # self.data `op` *x
     ret = Tensor(arg.forward(ctx, self.data,*[t.data for t in x]))
     ret._ctx = ctx
