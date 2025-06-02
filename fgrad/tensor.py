@@ -1,8 +1,11 @@
 import numpy as np
 from functools import partialmethod
 
+# **** start with three base classes ****
+
 class Context:
   def __init__(self, arg, *tensors):
+    # arg: operator
     self.arg = arg
     self.parents = tensors
     self.saved_tensors = []
@@ -46,6 +49,8 @@ class Tensor:
       div = Tensor(np.array([1/self.data.size]))
       return self.sum().mul(div)
 
+
+# encode the operation history and compute gradients.
 class Function:
   def apply(self, arg, *x):
     ctx = Context(arg, self, *x)
@@ -55,11 +60,15 @@ class Function:
     return ret
 
 def register(name, fxn):
+  # bind fxn.apply to Tensor.name
   # def apply(self, fxn, *x):
     # self  → Tensor
     # fxn   → Function （Dot / ReLU / …）
     # *x    → input Tensors
   setattr(Tensor, name, partialmethod(fxn.apply, fxn))
+
+
+# **** implement a few functions ****
 
 class ReLU(Function):
   @staticmethod
@@ -133,6 +142,8 @@ register("add", Add)
 class LogSoftmax(Function):
   @staticmethod
   def forward(ctx, input):
+    # logsumexp to avoid overflow
+    # inspired byhttps://gregorygundersen.com/blog/2020/02/09/log-sum-exp/?utm_source=chatgpt.com [6]
     def logsumexp(x):
       c = np.max(x,axis=1,keepdims=True)
       return c + np.log(np.exp(x - c).sum(axis=1,keepdims=True))
