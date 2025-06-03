@@ -178,10 +178,9 @@ class Conv2D(Function):
           for i in range(W):
             # tx: (N, cin)
             tx = x[:, :, Y+j, X+i]
-            for c in range(cout):
-              # tw: (cin,)
-              tw = w[c, :, j, i]
-              ret[:, c, Y, X] += tx.dot(tw.reshape(-1, 1)).reshape(-1)
+            # tw: (cout, cin)
+            tw = w[:, :, j, i]
+            ret[:, :, Y, X] += tx.dot(tw.T)
     return ret
 
 @staticmethod
