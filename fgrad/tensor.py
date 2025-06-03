@@ -50,9 +50,17 @@ class Function:
     self.saved_tensors.extend(x)
   
   def apply(self, arg, *x):
-    ctx = arg(self, *x)
-    # self.data `op` *x
-    ret = Tensor(arg.forward(ctx, self.data,*[t.data for t in x]))
+    # apply called by Function
+    if type(arg) == Tensor:
+      op = self
+      x = [arg] + list(x)
+    else:
+      # apply called by Tensor
+      op = arg
+      x = [self] + list(x)
+    # for saving the parents
+    ctx = op(*x)
+    ret = Tensor(op.forward(ctx, *[t.data for t in x]))
     ret._ctx = ctx
     return ret
 
@@ -136,16 +144,19 @@ class Add(Function):
     return grad_output, grad_output
 register("add", Add)
 
+
 class LogSoftmax(Function):
   @staticmethod
   def forward(ctx, input):
     # logsumexp to avoid overflow
-    # inspired byhttps://gregorygundersen.com/blog/2020/02/09/log-sum-exp/?utm_source=chatgpt.com [6]
+    # inspired by https://gregorygundersen.com/blog/2020/02/09/log-sum-exp/?utm_source=chatgpt.com [6]
     def logsumexp(x):
       c = np.max(x,axis=1,keepdims=True)
       return c + np.log(np.exp(x - c).sum(axis=1,keepdims=True))
     output = input - logsumexp(input)
     ctx.save_for_backward(output)
+    # the output is not probabilities bug logprobabilities(which are between -INF and 0)
+    # It’s often paired with loss functions like Negative Log Likelihood (NLL) Loss or Cross-Entropy Loss.
     return output
   
   @staticmethod
@@ -154,3 +165,27 @@ class LogSoftmax(Function):
     row_sum = grad_output.sum(axis=1,keepdims=True)
     return grad_output - np.exp(output) * row_sum
 register("logsoftmax", LogSoftmax)
+
+class Conv2D(Function):
+  @staticmethod
+  def forward(ctx, x, w):
+    cout, cin, H, W = w.shape
+    # ret: (N, cout, H', W')
+    ret = np.zeros((x.shape[0], cout, x.shape[2] - (H - 1), x.shape[3] - (W - 1)), dtype=w.dtype)
+    for Y in range(ret.shape[2]):
+      for X in range(ret.shape[3]):
+        for j in range(H):
+          for i in range(W):
+            # tx: (N, cin)
+            tx = x[:, :, Y+j, X+i]
+            for c in range(cout):
+              # tw: (cin,)
+              tw = w[c, :, j, i]
+              ret[:, c, Y, X] += tx.dot(tw.reshape(-1, 1)).reshape(-1)
+    return ret
+
+@staticmethod
+def backward(ctx, grad_output):
+  # TODO: implement backward pass
+  raise Exception("Not implemented")
+register("conv2d", Conv2D)

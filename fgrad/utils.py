@@ -2,6 +2,10 @@ import struct
 import numpy as np
 
 
+def layer_init_uniform(m, h):
+    ret = np.random.uniform(-1., 1., size=(m,h)).astype(np.float32) / np.sqrt(m*h)
+    return ret
+
 def fetch_mnist():
 
     def fetch(url):
@@ -32,12 +36,10 @@ def fetch_mnist():
     
     for train_images_url, train_labels_url, test_images_url, test_labels_url in urls:
         try:
-            # 训练数据图像
             file_data = fetch(train_images_url)
             _, num_images, rows, cols = struct.unpack(">IIII", file_data[:0x10])
             X_train = file_data[0x10:].reshape(-1, rows, cols)
             
-            # 训练数据标签
             file_data = fetch(train_labels_url)
             _, num_labels = struct.unpack(">II", file_data[:0x8])
             Y_train = file_data[0x8:]
