@@ -14,7 +14,7 @@ import numpy as np
 
 
 
-def layer_init(m, h):
+def layer_init_uniform(m, h):
     ret = np.random.uniform(-1., 1., size=(m,h)).astype(np.float32) / np.sqrt(m*h)
     return ret
 
@@ -115,11 +115,11 @@ X_train, Y_train, X_test, Y_test = fetch_mnist()
 X_train = X_train.astype(np.float32) / 255.0
 X_test = X_test.astype(np.float32) / 255.0
 # training
-l1 = Tensor(layer_init(28*28, 128))
-l2 = Tensor(layer_init(128, 10))
+l1 = Tensor(layer_init_uniform(28*28, 128))
+l2 = Tensor(layer_init_uniform(128, 10))
 lr = 0.01
 BS = 128
-optimizer = Adam([l1, l2], lr)
+optimizer = Adam([l1, l2], lr, weight_decay=0.01)
 # optimizer = SGD([l1, l2], lr)
 
 losses, accuracies = [], []

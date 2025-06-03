@@ -19,9 +19,6 @@ def fetch_mnist():
                 f.write(data)
         return numpy.frombuffer(gzip.decompress(data), dtype=np.uint8)
 
-    # 使用GitHub镜像源
-    base_url = "https://github.com/zalandoresearch/fashion-mnist/raw/master/data/fashion/"
-    # 如果fashion-mnist不可用，尝试其他镜像
     urls = [
         ("https://ossci-datasets.s3.amazonaws.com/mnist/train-images-idx3-ubyte.gz", 
          "https://ossci-datasets.s3.amazonaws.com/mnist/train-labels-idx1-ubyte.gz",
@@ -33,7 +30,6 @@ def fetch_mnist():
          "https://storage.googleapis.com/tensorflow/tf-keras-datasets/t10k-labels-idx1-ubyte.gz"),
     ]
     
-    # 尝试不同的镜像源
     for train_images_url, train_labels_url, test_images_url, test_labels_url in urls:
         try:
             # 训练数据图像
@@ -61,5 +57,3 @@ def fetch_mnist():
         except Exception as e:
             print(f"Failed to download from mirror, trying next one... Error: {e}")
             continue
-    
-    return X_train, Y_train, X_test, Y_test
