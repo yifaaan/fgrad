@@ -2,8 +2,8 @@ import struct
 import numpy as np
 
 
-def layer_init_uniform(m, h):
-    ret = np.random.uniform(-1., 1., size=(m,h)).astype(np.float32) / np.sqrt(m*h)
+def layer_init_uniform(*x):
+    ret = np.random.uniform(-1., 1., size=x).astype(np.float32) / np.sqrt(np.prod(x))
     return ret
 
 def fetch_mnist():

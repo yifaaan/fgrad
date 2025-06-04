@@ -13,7 +13,7 @@ class Tensor:
     # internal variables used for autograd graph construction
     self._ctx = None
   
-  def __str__(self):
+  def __repr__(self):
     return "Tensor %r with grad %r" % (self.data, self.grad)
 
   def backward(self, allow_fill=True):
@@ -29,8 +29,10 @@ class Tensor:
     if len(self._ctx.parents) == 1:
       grads = [grads]
     for t,g in zip(self._ctx.parents, grads):
+      if g is None:
+        continue
       if g.shape != t.data.shape:
-        print("grad shape must match tensor shape in %r, %r != %r" % (self._ctx.arg, g.shape, t.data.shape))
+        print("grad shape must match tensor shape in %r, %r != %r" % (self._ctx, g.shape, t.data.shape))
         assert False
       t.grad = g
       t.backward(False)
@@ -169,22 +171,49 @@ register("logsoftmax", LogSoftmax)
 class Conv2D(Function):
   @staticmethod
   def forward(ctx, x, w):
+    ctx.save_for_backward(x, w)
     cout, cin, H, W = w.shape
     # ret: (N, cout, H', W')
     ret = np.zeros((x.shape[0], cout, x.shape[2] - (H - 1), x.shape[3] - (W - 1)), dtype=w.dtype)
-    for Y in range(ret.shape[2]):
-      for X in range(ret.shape[3]):
-        for j in range(H):
-          for i in range(W):
-            # tx: (N, cin)
+    # inspired by https://cs231n.github.io/convolutional-networks/?utm_source=chatgpt.com
+    for j in range(H):
+      for i in range(W):
+        # evaluate the convolution at (j, i)
+        tw = w[:, :, j, i]
+        for Y in range(ret.shape[2]):
+          for X in range(ret.shape[3]):
             tx = x[:, :, Y+j, X+i]
-            # tw: (cout, cin)
-            tw = w[:, :, j, i]
             ret[:, :, Y, X] += tx.dot(tw.T)
+    
     return ret
 
-@staticmethod
-def backward(ctx, grad_output):
-  # TODO: implement backward pass
-  raise Exception("Not implemented")
+  @staticmethod
+  def backward(ctx, grad_output):
+    # grad_w: (cout, cin, H, W)
+    # grad_output: (N, cout, H', W') same as output's shape
+    # inspired by https://coolgpu.github.io/coolgpu_blog/github/pages/2020/10/04/convolution.html
+    input, weight = ctx.saved_tensors
+    grad_input, grad_weight = np.zeros_like(input), np.zeros_like(weight)
+    for Y in range(grad_output.shape[2]):
+      for X in range(grad_output.shape[3]):
+        # grad_output[:, :, Y, X],  (N, cout) 的张量,表示在输出特征图的 (Y, X) 位置上，损失对每个输出通道的梯度值
+        for j in range(weight.shape[2]): # 卷积核的每个高度位置
+          for i in range(weight.shape[3]): # 卷积核的每个宽度位置
+            tx = input[:, :, Y+j, X+i]
+            tw = weight[:, :, j, i] # 形状 (cout, cin)，这是卷积核在 (j,i) 位置所有通道的权重
+            grad_input[:, :, Y+j, X+i] += grad_output[:, :, Y, X].dot(tw)
+            grad_weight[:, :, j, i] += grad_output[:, :, Y, X].T.dot(tx)
+    return grad_input, grad_weight
 register("conv2d", Conv2D)
+
+class Reshape(Function):
+  @staticmethod
+  def forward(ctx, x, shape):
+    ctx.save_for_backward(x.shape)
+    return x.reshape(shape)
+  
+  @staticmethod
+  def backward(ctx, grad_output):
+    in_shape, = ctx.saved_tensors
+    return grad_output.reshape(in_shape), None
+register("reshape", Reshape)
