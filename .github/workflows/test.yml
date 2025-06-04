@@ -16,8 +16,6 @@ jobs:
       with:
         python-version: 3.12
     - name: Install Dependencies
-      run: pip install ipython numpy tqdm requests torch
-    - name: Run mnist test
-      run: python3 test/mnist.py
-    - name: Run compare to torch test
-      run: python3 test/test.py
+      run: pip install pytest numpy tqdm requests torch
+    - name: Run Pytest
+      run: python3 -m pytest -s -v
