@@ -38,7 +38,7 @@ class Tensor:
       t.backward(False)
   
   def mean(self):
-      div = Tensor(np.array([1/self.data.size]))
+      div = Tensor(np.array([1/self.data.size], dtype=self.data.dtype))
       return self.sum().mul(div)
 
 
